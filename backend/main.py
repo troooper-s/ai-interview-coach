@@ -10,6 +10,8 @@ from database import engine, SessionLocal, Base
 import models
 import schemas
 
+from google import genai
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -30,6 +32,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -72,3 +76,19 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/generate-questions", response_model=schemas.QuestionResponse)
+def generate_questions(request: schemas.QuestionRequest):
+    prompt = f"""
+You are a senior technical interviewer at {request.company}.
+Generate exactly 5 interview questions for a {request.role} candidate.
+Cover a mix of: data structures/algorithms, system design basics, and behavioral questions.
+Return ONLY a numbered list of questions, no introduction, no extra commentary.
+"""
+
+    response = gemini_client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt
+    )
+
+    return {"questions": response.text}
