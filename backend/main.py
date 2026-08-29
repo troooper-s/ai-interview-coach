@@ -12,6 +12,10 @@ import schemas
 
 from google import genai
 
+from fastapi import UploadFile, File
+from pypdf import PdfReader
+import io
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -79,10 +83,14 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
 
 @app.post("/generate-questions", response_model=schemas.QuestionResponse)
 def generate_questions(request: schemas.QuestionRequest):
+    resume_section = f"\nCandidate's resume:\n{request.resume_text}\n" if request.resume_text else ""
     prompt = f"""
 You are a senior technical interviewer at {request.company}.
 Generate exactly 5 interview questions for a {request.role} candidate.
 Cover a mix of: data structures/algorithms, system design basics, and behavioral questions.
+{resume_section}
+If resume information is provided above, make at least 1-2 questions specifically reference
+real projects, skills, or experience mentioned in the resume.
 Return ONLY a numbered list of questions, no introduction, no extra commentary.
 """
 
@@ -92,3 +100,14 @@ Return ONLY a numbered list of questions, no introduction, no extra commentary.
     )
 
     return {"questions": response.text}
+
+@app.post("/upload-resume")
+async def upload_resume(file: UploadFile = File(...)):
+    contents = await file.read()
+    pdf_reader = PdfReader(io.BytesIO(contents))
+
+    extracted_text = ""
+    for page in pdf_reader.pages:
+        extracted_text += page.extract_text()
+
+    return {"filename": file.filename, "extracted_text": extracted_text}

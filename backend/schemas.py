@@ -24,6 +24,7 @@ class Token(BaseModel):
 class QuestionRequest(BaseModel):
     company: str
     role: str
+    resume_text: str = ""
 
 class QuestionResponse(BaseModel):
     questions: str   
