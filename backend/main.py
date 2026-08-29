@@ -15,6 +15,9 @@ from google import genai
 from fastapi import UploadFile, File
 from pypdf import PdfReader
 import io
+import whisper
+import tempfile
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -38,6 +41,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+whisper_model = whisper.load_model("base")
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -111,3 +115,14 @@ async def upload_resume(file: UploadFile = File(...)):
         extracted_text += page.extract_text()
 
     return {"filename": file.filename, "extracted_text": extracted_text}
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    contents = await file.read()
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+
+    result = whisper_model.transcribe(tmp_path)
+
+    return {"transcribed_text": result["text"]}
