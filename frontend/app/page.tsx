@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 
+const API_URL = "https://ai-interview-coach-sp.onrender.com";
+
 export default function Home() {
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
@@ -43,7 +45,7 @@ export default function Home() {
         : { name: authName, email: authEmail, password: authPassword };
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+      const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -88,7 +90,7 @@ export default function Home() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/upload-resume", {
+      const res = await fetch(`${API_URL}/upload-resume`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -107,7 +109,7 @@ export default function Home() {
     setQuestions("");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/generate-questions", {
+      const res = await fetch(`${API_URL}/generate-questions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -166,7 +168,7 @@ export default function Home() {
     formData.append("file", audioBlob, "answer.webm");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/transcribe", {
+      const res = await fetch(`${API_URL}/transcribe`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -185,7 +187,7 @@ export default function Home() {
     setScoreResult(null);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/score-answer", {
+      const res = await fetch(`${API_URL}/score-answer`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
