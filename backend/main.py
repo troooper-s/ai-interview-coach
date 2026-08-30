@@ -20,6 +20,8 @@ import tempfile
 
 import json
 
+from fastapi.security import OAuth2PasswordBearer
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -37,6 +39,7 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
@@ -49,12 +52,34 @@ def create_access_token(data: dict):
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except Exception:
+        raise credentials_exception
+
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    if user is None:
+        raise credentials_exception
+    return user
 
 @app.get("/")
 def read_root():
@@ -76,6 +101,7 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
+
 @app.post("/login", response_model=schemas.Token)
 def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == credentials.email).first()
@@ -87,7 +113,7 @@ def login(credentials: schemas.LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/generate-questions", response_model=schemas.QuestionResponse)
-def generate_questions(request: schemas.QuestionRequest):
+def generate_questions(request: schemas.QuestionRequest, current_user: models.User = Depends(get_current_user)):
     resume_section = f"\nCandidate's resume:\n{request.resume_text}\n" if request.resume_text else ""
     prompt = f"""
 You are a senior technical interviewer at {request.company}.
@@ -107,7 +133,7 @@ Return ONLY a numbered list of questions, no introduction, no extra commentary.
     return {"questions": response.text}
 
 @app.post("/upload-resume")
-async def upload_resume(file: UploadFile = File(...)):
+async def upload_resume(file: UploadFile = File(...), current_user: models.User = Depends(get_current_user)):
     contents = await file.read()
     pdf_reader = PdfReader(io.BytesIO(contents))
 
@@ -116,8 +142,9 @@ async def upload_resume(file: UploadFile = File(...)):
         extracted_text += page.extract_text()
 
     return {"filename": file.filename, "extracted_text": extracted_text}
+
 @app.post("/transcribe")
-async def transcribe_audio(file: UploadFile = File(...)):
+async def transcribe_audio(file: UploadFile = File(...), current_user: models.User = Depends(get_current_user)):
     contents = await file.read()
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
@@ -129,7 +156,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
     return {"transcribed_text": result["text"]}
 
 @app.post("/score-answer", response_model=schemas.ScoreResponse)
-def score_answer(request: schemas.ScoreRequest):
+def score_answer(request: schemas.ScoreRequest, current_user: models.User = Depends(get_current_user)):
     prompt = f"""
 You are an expert interview coach evaluating a candidate's spoken answer.
 

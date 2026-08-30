@@ -25,6 +25,58 @@ export default function Home() {
     feedback: string;
   } | null>(null);
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [token, setToken] = useState("");
+
+  const handleAuth = async () => {
+    setAuthError("");
+
+    const endpoint = authMode === "login" ? "/login" : "/signup";
+    const body =
+      authMode === "login"
+        ? { email: authEmail, password: authPassword }
+        : { name: authName, email: authEmail, password: authPassword };
+
+    try {
+      const res = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        setAuthError(errorData.detail || "Something went wrong");
+        return;
+      }
+
+      if (authMode === "signup") {
+        setAuthMode("login");
+        setAuthError("Account created! Please log in.");
+        return;
+      }
+
+      const data = await res.json();
+      setToken(data.access_token);
+      setIsLoggedIn(true);
+    } catch (err) {
+      setAuthError("Could not connect to backend.");
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setToken("");
+    setQuestions("");
+    setTranscribedText("");
+    setScoreResult(null);
+  };
+
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -38,6 +90,7 @@ export default function Home() {
     try {
       const res = await fetch("http://127.0.0.1:8000/upload-resume", {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();
@@ -56,7 +109,10 @@ export default function Home() {
     try {
       const res = await fetch("http://127.0.0.1:8000/generate-questions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ company, role, resume_text: resumeText }),
       });
       const data = await res.json();
@@ -112,6 +168,7 @@ export default function Home() {
     try {
       const res = await fetch("http://127.0.0.1:8000/transcribe", {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();
@@ -130,7 +187,10 @@ export default function Home() {
     try {
       const res = await fetch("http://127.0.0.1:8000/score-answer", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ question: questions, answer: transcribedText }),
       });
       const data = await res.json();
@@ -142,9 +202,79 @@ export default function Home() {
     setScoring(false);
   };
 
+  if (!isLoggedIn) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black text-white p-10">
+        <h1 className="text-3xl font-bold mb-4">AI Interview Coach</h1>
+
+        <div className="flex flex-col gap-3 w-80">
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={() => setAuthMode("login")}
+              className={`flex-1 rounded px-3 py-2 font-medium ${
+                authMode === "login" ? "bg-blue-600" : "bg-zinc-800"
+              }`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setAuthMode("signup")}
+              className={`flex-1 rounded px-3 py-2 font-medium ${
+                authMode === "signup" ? "bg-blue-600" : "bg-zinc-800"
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {authMode === "signup" && (
+            <input
+              type="text"
+              placeholder="Name"
+              value={authName}
+              onChange={(e) => setAuthName(e.target.value)}
+              className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
+            />
+          )}
+          <input
+            type="email"
+            placeholder="Email"
+            value={authEmail}
+            onChange={(e) => setAuthEmail(e.target.value)}
+            className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={authPassword}
+            onChange={(e) => setAuthPassword(e.target.value)}
+            className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
+          />
+
+          {authError && <p className="text-sm text-yellow-400">{authError}</p>}
+
+          <button
+            onClick={handleAuth}
+            className="rounded bg-green-600 px-4 py-2 font-medium hover:bg-green-700"
+          >
+            {authMode === "login" ? "Log In" : "Sign Up"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center gap-6 bg-black text-white p-10">
-      <h1 className="text-4xl font-bold">AI Interview Coach</h1>
+      <div className="w-96 flex justify-between items-center">
+        <h1 className="text-4xl font-bold">AI Interview Coach</h1>
+        <button
+          onClick={handleLogout}
+          className="text-sm text-zinc-400 hover:text-white underline"
+        >
+          Logout
+        </button>
+      </div>
 
       <div className="flex flex-col gap-3 w-96">
         <input
