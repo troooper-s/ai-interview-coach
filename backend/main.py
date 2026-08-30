@@ -18,6 +18,7 @@ import io
 import whisper
 import tempfile
 
+import json
 
 Base.metadata.create_all(bind=engine)
 
@@ -126,3 +127,36 @@ async def transcribe_audio(file: UploadFile = File(...)):
     result = whisper_model.transcribe(tmp_path)
 
     return {"transcribed_text": result["text"]}
+
+@app.post("/score-answer", response_model=schemas.ScoreResponse)
+def score_answer(request: schemas.ScoreRequest):
+    prompt = f"""
+You are an expert interview coach evaluating a candidate's spoken answer.
+
+Question asked: {request.question}
+Candidate's answer (transcribed from speech): {request.answer}
+
+Evaluate the answer and score it from 1 to 10 on each of these:
+- communication_score: clarity, structure, how well they expressed their thoughts
+- technical_score: correctness and depth of the technical content (if the question is behavioral, judge relevance and substance instead)
+- confidence_score: how confident and decisive the answer sounds, based on wording (avoid vague hedging, filler words, uncertainty)
+
+Also provide brief, constructive feedback (2-3 sentences) on how they could improve.
+
+Respond with ONLY valid JSON in exactly this format, no extra text, no markdown code blocks:
+{{"communication_score": <number>, "technical_score": <number>, "confidence_score": <number>, "feedback": "<text>"}}
+"""
+
+    response = gemini_client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt
+    )
+
+    result_text = response.text.strip()
+    if result_text.startswith("```"):
+        result_text = result_text.split("```")[1]
+        if result_text.startswith("json"):
+            result_text = result_text[4:]
+
+    result_json = json.loads(result_text)
+    return result_json

@@ -28,3 +28,13 @@ class QuestionRequest(BaseModel):
 
 class QuestionResponse(BaseModel):
     questions: str   
+
+class ScoreRequest(BaseModel):
+    question: str
+    answer: str
+
+class ScoreResponse(BaseModel):
+    communication_score: int
+    technical_score: int
+    confidence_score: int
+    feedback: str
