@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function Home() {
   const [company, setCompany] = useState("");
@@ -10,6 +10,12 @@ export default function Home() {
   const [questions, setQuestions] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const [recording, setRecording] = useState(false);
+  const [transcribedText, setTranscribedText] = useState("");
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,6 +71,50 @@ export default function Home() {
     window.speechSynthesis.cancel();
   };
 
+  const startRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = mediaRecorder;
+    audioChunksRef.current = [];
+
+    mediaRecorder.ondataavailable = (event) => {
+      audioChunksRef.current.push(event.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      await sendAudioForTranscription(audioBlob);
+    };
+
+    mediaRecorder.start();
+    setRecording(true);
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  };
+
+  const sendAudioForTranscription = async (audioBlob: Blob) => {
+    setTranscribing(true);
+
+    const formData = new FormData();
+    formData.append("file", audioBlob, "answer.webm");
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      setTranscribedText(data.transcribed_text);
+    } catch (err) {
+      setTranscribedText("Transcription failed.");
+    }
+
+    setTranscribing(false);
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center gap-6 bg-black text-white p-10">
       <h1 className="text-4xl font-bold">AI Interview Coach</h1>
@@ -108,28 +158,50 @@ export default function Home() {
           {loading ? "Generating..." : "Generate Questions"}
         </button>
       </div>
-    {questions && (
-  <div className="flex gap-2">
-    <button
-      onClick={() => speakText(questions)}
-      className="rounded bg-green-600 px-4 py-2 font-medium hover:bg-green-700"
-    >
-      🔊 Read Questions Aloud
-    </button>
-    <button
-      onClick={stopSpeaking}
-      className="rounded bg-red-600 px-4 py-2 font-medium hover:bg-red-700"
-    >
-      ⏹ Stop
-    </button>
-  </div>
-)}
-      
+
+      {questions && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => speakText(questions)}
+            className="rounded bg-green-600 px-4 py-2 font-medium hover:bg-green-700"
+          >
+            🔊 Read Questions Aloud
+          </button>
+          <button
+            onClick={stopSpeaking}
+            className="rounded bg-red-600 px-4 py-2 font-medium hover:bg-red-700"
+          >
+            ⏹ Stop
+          </button>
+        </div>
+      )}
 
       {questions && (
         <pre className="whitespace-pre-wrap w-96 rounded border border-zinc-700 p-4 text-sm text-zinc-300">
           {questions}
         </pre>
+      )}
+
+      {questions && (
+        <div className="flex flex-col items-center gap-2">
+          <button
+            onClick={recording ? stopRecording : startRecording}
+            className={`rounded px-6 py-3 font-medium ${
+              recording ? "bg-red-600 hover:bg-red-700" : "bg-purple-600 hover:bg-purple-700"
+            }`}
+          >
+            {recording ? "⏹ Stop Recording" : "🎤 Record Your Answer"}
+          </button>
+
+          {transcribing && <p className="text-sm text-zinc-500">Transcribing your answer...</p>}
+
+          {transcribedText && (
+            <div className="w-96 rounded border border-zinc-700 p-4 text-sm text-zinc-300">
+              <p className="text-zinc-500 mb-1">Your answer:</p>
+              {transcribedText}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
