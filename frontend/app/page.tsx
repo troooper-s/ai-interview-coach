@@ -17,6 +17,14 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const [scoring, setScoring] = useState(false);
+  const [scoreResult, setScoreResult] = useState<{
+    communication_score: number;
+    technical_score: number;
+    confidence_score: number;
+    feedback: string;
+  } | null>(null);
+
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -115,6 +123,25 @@ export default function Home() {
     setTranscribing(false);
   };
 
+  const handleScoreAnswer = async () => {
+    setScoring(true);
+    setScoreResult(null);
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/score-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: questions, answer: transcribedText }),
+      });
+      const data = await res.json();
+      setScoreResult(data);
+    } catch (err) {
+      setScoreResult(null);
+    }
+
+    setScoring(false);
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center gap-6 bg-black text-white p-10">
       <h1 className="text-4xl font-bold">AI Interview Coach</h1>
@@ -199,6 +226,35 @@ export default function Home() {
             <div className="w-96 rounded border border-zinc-700 p-4 text-sm text-zinc-300">
               <p className="text-zinc-500 mb-1">Your answer:</p>
               {transcribedText}
+            </div>
+          )}
+
+          {transcribedText && (
+            <button
+              onClick={handleScoreAnswer}
+              disabled={scoring}
+              className="rounded bg-yellow-600 px-4 py-2 font-medium hover:bg-yellow-700 disabled:opacity-50"
+            >
+              {scoring ? "Scoring..." : "📊 Score My Answer"}
+            </button>
+          )}
+
+          {scoreResult && (
+            <div className="w-96 rounded border border-zinc-700 p-4 text-sm">
+              <div className="flex justify-between mb-2">
+                <span className="text-zinc-400">Communication</span>
+                <span className="font-bold text-blue-400">{scoreResult.communication_score}/10</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-zinc-400">Technical</span>
+                <span className="font-bold text-blue-400">{scoreResult.technical_score}/10</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-zinc-400">Confidence</span>
+                <span className="font-bold text-blue-400">{scoreResult.confidence_score}/10</span>
+              </div>
+              <p className="text-zinc-500 mt-3 mb-1">Feedback:</p>
+              <p className="text-zinc-300">{scoreResult.feedback}</p>
             </div>
           )}
         </div>
