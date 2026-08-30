@@ -45,7 +45,14 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-whisper_model = whisper.load_model("base")
+
+whisper_model = None
+
+def get_whisper_model():
+    global whisper_model
+    if whisper_model is None:
+        whisper_model = whisper.load_model("tiny")
+    return whisper_model
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -151,7 +158,8 @@ async def transcribe_audio(file: UploadFile = File(...), current_user: models.Us
         tmp.write(contents)
         tmp_path = tmp.name
 
-    result = whisper_model.transcribe(tmp_path)
+    model = get_whisper_model()
+    result = model.transcribe(tmp_path)
 
     return {"transcribed_text": result["text"]}
 
