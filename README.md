@@ -60,4 +60,3 @@ This project was built and documented step-by-step, including real debugging cha
 
 ## 👤 Author
 
-Shreela Prasad — B.Tech Computer Science, BIT Mesra
