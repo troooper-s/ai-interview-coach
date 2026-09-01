@@ -15,12 +15,15 @@ from google import genai
 from fastapi import UploadFile, File
 from pypdf import PdfReader
 import io
-import whisper
+
+from faster_whisper import WhisperModel
+import asyncio
 import tempfile
 
 import json
 
 from fastapi.security import OAuth2PasswordBearer
+import re
 
 Base.metadata.create_all(bind=engine)
 
@@ -54,8 +57,13 @@ whisper_model = None
 def get_whisper_model():
     global whisper_model
     if whisper_model is None:
-        whisper_model = whisper.load_model("tiny")
+        whisper_model = WhisperModel("tiny.en", device="cpu", compute_type="int8")
     return whisper_model
+
+def _run_transcription(tmp_path: str) -> str:
+    model = get_whisper_model()
+    segments, _ = model.transcribe(tmp_path)
+    return " ".join(seg.text for seg in segments).strip()
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -132,7 +140,8 @@ Cover a mix of: data structures/algorithms, system design basics, and behavioral
 {resume_section}
 If resume information is provided above, make at least 1-2 questions specifically reference
 real projects, skills, or experience mentioned in the resume.
-Return ONLY a numbered list of questions, no introduction, no extra commentary.
+Return ONLY a numbered list of questions, one per line, no introduction, no extra commentary,
+no markdown formatting like bold or bullet points.
 """
 
     response = gemini_client.models.generate_content(
@@ -140,7 +149,16 @@ Return ONLY a numbered list of questions, no introduction, no extra commentary.
         contents=prompt
     )
 
-    return {"questions": response.text}
+    raw_text = response.text.strip()
+    print("RAW GEMINI RESPONSE:", repr(raw_text))
+
+    questions_list = re.split(r'(?:^|\n)\s*\d+\.\s+', raw_text)
+    questions_list = [q.strip() for q in questions_list if q.strip() and len(q.strip()) > 20]
+
+    if not questions_list:
+        questions_list = [raw_text]
+
+    return {"questions": questions_list}
 
 @app.post("/upload-resume")
 async def upload_resume(file: UploadFile = File(...), current_user: models.User = Depends(get_current_user)):
@@ -161,10 +179,17 @@ async def transcribe_audio(file: UploadFile = File(...), current_user: models.Us
         tmp.write(contents)
         tmp_path = tmp.name
 
-    model = get_whisper_model()
-    result = model.transcribe(tmp_path)
-
-    return {"transcribed_text": result["text"]}
+    try:
+        text = await asyncio.to_thread(_run_transcription, tmp_path)
+        if not text:
+            raise HTTPException(status_code=422, detail="Could not transcribe audio")
+        return {"transcribed_text": text}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Transcription failed")
+    finally:
+        os.remove(tmp_path)
 
 @app.post("/score-answer", response_model=schemas.ScoreResponse)
 def score_answer(request: schemas.ScoreRequest, current_user: models.User = Depends(get_current_user)):

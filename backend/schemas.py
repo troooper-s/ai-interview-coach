@@ -19,7 +19,7 @@ class LoginRequest(BaseModel):
 
 class Token(BaseModel):
     access_token: str
-    token_type: str   
+    token_type: str
 
 class QuestionRequest(BaseModel):
     company: str
@@ -27,7 +27,7 @@ class QuestionRequest(BaseModel):
     resume_text: str = ""
 
 class QuestionResponse(BaseModel):
-    questions: str   
+    questions: list[str]
 
 class ScoreRequest(BaseModel):
     question: str
