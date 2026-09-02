@@ -124,3 +124,8 @@
 ### UI Polish
 - Redesigned the interface with a refined dark neutral color palette, card-based layout, and a visual progress indicator for interview questions
 - Improved typography, spacing, and button hierarchy for a more professional, portfolio-ready appearance
+
+### Testing
+- Added basic pytest test suite covering: root endpoint, user signup, duplicate email rejection, and login with wrong password
+- Uses FastAPI's TestClient for fast, in-process API testing
+- All 4 tests passing

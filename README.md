@@ -76,7 +76,15 @@ This project was built and documented step-by-step, including real debugging cha
 
 ## 🧪 Testing
 
-Basic backend tests are planned using `pytest` to cover authentication flows and API response validation. This is an area for future improvement — currently the application has been validated through extensive manual end-to-end testing across local and deployed environments (see [PROGRESS.md](./PROGRESS.md) for the full debugging history).
+Basic backend tests using `pytest` cover core authentication flows (signup, duplicate email handling, login failure cases) and API health checks. Run with:
+
+```bash
+cd backend
+pytest
+```
+
+The application has also been validated through extensive manual end-to-end testing across local and deployed environments (see [PROGRESS.md](./PROGRESS.md) for the full debugging history). Expanding test coverage to include AI-integration endpoints and using a dedicated test database are natural next steps.
+
 
 ## 👤 Author
 
