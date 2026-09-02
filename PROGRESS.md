@@ -88,3 +88,39 @@
 - Extensive testing during development can exhaust this quota, causing temporary 500 errors on /generate-questions and /score-answer
 - This is an expected constraint of free-tier AI API usage, not a code bug
 - Production use would require a paid Gemini tier for higher limits
+
+## Post-Deployment Fixes & Improvements
+
+### Bug: Question parsing splitting incorrectly
+- Initial regex split on every digit-dot-space pattern, breaking questions that contained numbers mid-sentence into fragments
+- Fixed by anchoring the split pattern to only match numbering at the start of a line: `(?:^|\n)\s*\d+\.\s+`
+- **Debugging insight:** traced the issue by adding a debug print of the raw Gemini response, which revealed the AI wasn't returning clean newline-separated text as expected
+
+### Bug: HTTP/HTTPS protocol mismatch during local testing
+- Local backend runs on plain HTTP; frontend was configured with `https://` when testing against localhost, causing `ERR_SSL_PROTOCOL_ERROR`
+- Fixed by ensuring `API_URL` uses `http://` for local development and `https://` only for the deployed backend
+
+### Bug: faster-whisper not installed
+- Switched from `openai-whisper` to `faster-whisper` for better performance, but the package wasn't installed in the environment, causing a `ModuleNotFoundError` on backend startup
+- Fixed by installing the package and regenerating `requirements.txt`
+
+### Feature: One-question-at-a-time interview flow
+- Redesigned the interview experience from "all 5 questions shown at once, scored against one blob of text" to a proper sequential flow: one question displayed, answered, and scored at a time, with a "Next Question" progression and a final summary screen showing all scores
+- Backend now returns questions as a structured list (`list[str]`) instead of a single formatted string, enabling per-question tracking
+
+### Feature: Text-answer fallback for voice
+- Added a manual text input alongside voice recording, so users can still complete and score an interview if microphone access or transcription fails
+- Addresses a real UX gap: previously, a failed transcription left the user stuck with no way to proceed
+
+### Feature: Graceful error handling for AI failures
+- Added a "Try Again" retry UI for scoring failures (e.g. when the AI service is temporarily overloaded), replacing a silent, confusing failure with a clear, actionable message
+
+### Known Limitation: Gemini free-tier daily quota
+- Google Gemini's free tier allows only 20 requests per day per model
+- Extensive testing can exhaust this quota, causing temporary 500/503 errors on `/generate-questions` and `/score-answer` until the daily reset
+- This is an expected constraint of free-tier AI API usage, not a code defect
+- Production use would require a paid Gemini tier for higher limits
+
+### UI Polish
+- Redesigned the interface with a refined dark neutral color palette, card-based layout, and a visual progress indicator for interview questions
+- Improved typography, spacing, and button hierarchy for a more professional, portfolio-ready appearance
