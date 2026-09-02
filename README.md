@@ -4,13 +4,18 @@ An AI-powered mock interview platform that generates personalized interview ques
 
 **🔗 Live Demo:** [https://ai-interview-coach-eosin-one.vercel.app](https://ai-interview-coach-eosin-one.vercel.app)
 
+
 ## ✨ Features
 
 - **📄 Resume-Aware Question Generation** — Upload your resume; questions are personalized to reference your real projects and skills
 - **🏢 Company & Role Targeting** — Get interview questions tailored to a specific company and role
-- **🔊 Voice Interaction** — AI reads questions aloud (Text-to-Speech) and listens to your spoken answers (Speech-to-Text via OpenAI Whisper)
-- **📊 AI-Powered Scoring** — Get scored on communication, technical accuracy, and confidence, with constructive written feedback
+- **🔊 Voice Interaction** — AI reads questions aloud (Text-to-Speech) and listens to your spoken answers (Speech-to-Text via faster-whisper)
+- **⌨️ Text Fallback** — Type your answer instead of speaking, if voice recording isn't available or convenient
+- **📝 Sequential Interview Flow** — Questions are presented one at a time with a progress indicator, mirroring a real interview experience
+- **📊 AI-Powered Scoring** — Get scored on communication, technical accuracy, and confidence, with constructive written feedback after each answer
+- **📈 Interview Summary** — Review all your scores and feedback together at the end of each session
 - **🔐 Secure Authentication** — JWT-based auth with hashed passwords
+
 
 ## 🛠️ Tech Stack
 
