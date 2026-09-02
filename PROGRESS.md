@@ -82,3 +82,9 @@
 - Environment setup and debugging (Windows-specific issues, PATH configuration, service management)
 - Production deployment across multiple platforms, with real memory/CORS debugging
 - Git version control and structured commit history throughout development
+
+## Known Limitation: Gemini Free-Tier Daily Quota
+- Google Gemini's free tier allows only 20 requests per day per model
+- Extensive testing during development can exhaust this quota, causing temporary 500 errors on /generate-questions and /score-answer
+- This is an expected constraint of free-tier AI API usage, not a code bug
+- Production use would require a paid Gemini tier for higher limits

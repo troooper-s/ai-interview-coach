@@ -2,8 +2,8 @@
 
 import { useState, useRef } from "react";
 
-
 const API_URL = "https://ai-interview-coach-sp.onrender.com";
+
 type ScoreData = {
   communication_score: number;
   technical_score: number;
@@ -32,6 +32,7 @@ export default function Home() {
 
   const [scoring, setScoring] = useState(false);
   const [scoreResult, setScoreResult] = useState<ScoreData | null>(null);
+  const [scoreError, setScoreError] = useState(false);
   const [allScores, setAllScores] = useState<ScoreData[]>([]);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -65,7 +66,7 @@ export default function Home() {
 
       if (authMode === "signup") {
         setAuthMode("login");
-        setAuthError("Account created! Please log in.");
+        setAuthError("Account created. Please log in.");
         return;
       }
 
@@ -91,6 +92,7 @@ export default function Home() {
     setScoreResult(null);
     setAllScores([]);
     setTranscribeError(false);
+    setScoreError(false);
   };
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,6 +214,7 @@ export default function Home() {
 
     setScoring(true);
     setScoreResult(null);
+    setScoreError(false);
 
     try {
       const res = await fetch(`${API_URL}/score-answer`, {
@@ -222,6 +225,7 @@ export default function Home() {
         },
         body: JSON.stringify({ question: questionsList[currentIndex], answer }),
       });
+      if (!res.ok) throw new Error("failed");
       const data = await res.json();
       setScoreResult(data);
       setAllScores((prev) => {
@@ -230,7 +234,7 @@ export default function Home() {
         return updated;
       });
     } catch (err) {
-      setScoreResult(null);
+      setScoreError(true);
     }
 
     setScoring(false);
@@ -241,65 +245,82 @@ export default function Home() {
     setManualAnswer("");
     setScoreResult(null);
     setTranscribeError(false);
+    setScoreError(false);
     setCurrentIndex((i) => i + 1);
   };
 
   if (!isLoggedIn) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black text-white p-10">
-        <h1 className="text-3xl font-bold mb-4">AI Interview Coach</h1>
-        <div className="flex flex-col gap-3 w-80">
-          <div className="flex gap-2 mb-2">
-            <button
-              onClick={() => setAuthMode("login")}
-              className={`flex-1 rounded px-3 py-2 font-medium ${
-                authMode === "login" ? "bg-blue-600" : "bg-zinc-800"
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setAuthMode("signup")}
-              className={`flex-1 rounded px-3 py-2 font-medium ${
-                authMode === "signup" ? "bg-blue-600" : "bg-zinc-800"
-              }`}
-            >
-              Sign Up
-            </button>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-950 text-white p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-semibold tracking-tight">AI Interview Coach</h1>
+            <p className="text-neutral-500 text-sm mt-1">Practice interviews with AI-powered feedback</p>
           </div>
 
-          {authMode === "signup" && (
-            <input
-              type="text"
-              placeholder="Name"
-              value={authName}
-              onChange={(e) => setAuthName(e.target.value)}
-              className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
-            />
-          )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={authEmail}
-            onChange={(e) => setAuthEmail(e.target.value)}
-            className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={authPassword}
-            onChange={(e) => setAuthPassword(e.target.value)}
-            className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
-          />
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+            <div className="flex gap-1 mb-5 bg-neutral-950 rounded-lg p-1">
+              <button
+                onClick={() => setAuthMode("login")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                  authMode === "login"
+                    ? "bg-neutral-800 text-white"
+                    : "text-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                Log in
+              </button>
+              <button
+                onClick={() => setAuthMode("signup")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                  authMode === "signup"
+                    ? "bg-neutral-800 text-white"
+                    : "text-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                Sign up
+              </button>
+            </div>
 
-          {authError && <p className="text-sm text-yellow-400">{authError}</p>}
+            <div className="flex flex-col gap-3">
+              {authMode === "signup" && (
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  className="px-3 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600"
+                />
+              )}
+              <input
+                type="email"
+                placeholder="Email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                className="px-3 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                className="px-3 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600"
+              />
 
-          <button
-            onClick={handleAuth}
-            className="rounded bg-green-600 px-4 py-2 font-medium hover:bg-green-700"
-          >
-            {authMode === "login" ? "Log In" : "Sign Up"}
-          </button>
+              {authError && (
+                <p className="text-xs text-amber-400 bg-amber-950/40 border border-amber-900 rounded-lg px-3 py-2">
+                  {authError}
+                </p>
+              )}
+
+              <button
+                onClick={handleAuth}
+                className="mt-1 rounded-lg bg-white text-neutral-950 px-4 py-2.5 text-sm font-medium hover:bg-neutral-200 transition"
+              >
+                {authMode === "login" ? "Log in" : "Create account"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -310,185 +331,232 @@ export default function Home() {
   const isInterviewDone = hasQuestions && currentIndex >= questionsList.length;
 
   return (
-    <div className="flex min-h-screen flex-col items-center gap-6 bg-black text-white p-10">
-      <div className="w-96 flex justify-between items-center">
-        <h1 className="text-4xl font-bold">AI Interview Coach</h1>
-        <button onClick={handleLogout} className="text-sm text-zinc-400 hover:text-white underline">
-          Logout
-        </button>
-      </div>
-
-      {!hasQuestions && (
-        <div className="flex flex-col gap-3 w-96">
-          <input
-            type="text"
-            placeholder="Company (e.g. Google)"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
-          />
-          <input
-            type="text"
-            placeholder="Role (e.g. Software Engineer)"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white"
-          />
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-zinc-400">Upload resume (PDF, optional)</span>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={handleResumeUpload}
-              className="text-sm text-zinc-300"
-            />
-          </label>
-
-          {uploading && <p className="text-sm text-zinc-500">Extracting resume text...</p>}
-          {resumeFileName && !uploading && (
-            <p className="text-sm text-green-400">✓ {resumeFileName} loaded</p>
-          )}
-
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="max-w-lg mx-auto px-5 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-xl font-semibold tracking-tight">AI Interview Coach</h1>
           <button
-            onClick={handleGenerate}
-            disabled={loading || !company || !role}
-            className="rounded bg-blue-600 px-4 py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+            onClick={handleLogout}
+            className="text-xs text-neutral-500 hover:text-neutral-300 transition"
           >
-            {loading ? "Generating..." : "Generate Questions"}
+            Log out
           </button>
         </div>
-      )}
 
-      {hasQuestions && !isInterviewDone && (
-        <div className="flex flex-col items-center gap-4 w-96">
-          <p className="text-sm text-zinc-500">
-            Question {currentIndex + 1} of {questionsList.length}
-          </p>
+        {!hasQuestions && (
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+            <h2 className="text-sm font-medium text-neutral-400 mb-4">Set up your interview</h2>
+            <div className="flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="Company (e.g. Google)"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="px-3 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600"
+              />
+              <input
+                type="text"
+                placeholder="Role (e.g. Software Engineer)"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="px-3 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600"
+              />
 
-          <div className="w-full rounded border border-zinc-700 p-4 text-sm text-zinc-200">
-            {questionsList[currentIndex]}
-          </div>
+              <label className="flex flex-col gap-2">
+                <span className="text-xs text-neutral-500">Resume (PDF, optional)</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleResumeUpload}
+                  className="text-xs text-neutral-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-neutral-800 file:text-neutral-300 hover:file:bg-neutral-700"
+                />
+              </label>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => speakText(questionsList[currentIndex])}
-              className="rounded bg-green-600 px-3 py-2 text-sm font-medium hover:bg-green-700"
-            >
-              🔊 Read Aloud
-            </button>
-            <button
-              onClick={stopSpeaking}
-              className="rounded bg-red-600 px-3 py-2 text-sm font-medium hover:bg-red-700"
-            >
-              ⏹ Stop
-            </button>
-          </div>
-
-          <button
-            onClick={recording ? stopRecording : startRecording}
-            className={`rounded px-6 py-3 font-medium w-full ${
-              recording ? "bg-red-600 hover:bg-red-700" : "bg-purple-600 hover:bg-purple-700"
-            }`}
-          >
-            {recording ? "⏹ Stop Recording" : "🎤 Record Your Answer"}
-          </button>
-
-          {transcribing && <p className="text-sm text-zinc-500">Transcribing your answer...</p>}
-          {transcribeError && (
-            <p className="text-sm text-yellow-400">
-              Voice transcription didn't work — no worries, just type your answer below instead.
-            </p>
-          )}
-
-          {transcribedText && (
-            <div className="w-full rounded border border-zinc-700 p-3 text-sm text-zinc-300">
-              <p className="text-zinc-500 mb-1">Transcribed answer:</p>
-              {transcribedText}
-            </div>
-          )}
-
-          <div className="w-full flex flex-col gap-1">
-            <span className="text-sm text-zinc-400">
-              Or type your answer {transcribedText ? "(overrides voice answer)" : ""}
-            </span>
-            <textarea
-              value={manualAnswer}
-              onChange={(e) => setManualAnswer(e.target.value)}
-              placeholder="Type your answer here..."
-              rows={4}
-              className="p-2 rounded bg-zinc-900 border border-zinc-700 text-white text-sm"
-            />
-          </div>
-
-          <button
-            onClick={handleScoreAnswer}
-            disabled={scoring || !getCurrentAnswer()}
-            className="rounded bg-yellow-600 px-4 py-2 font-medium hover:bg-yellow-700 disabled:opacity-50 w-full"
-          >
-            {scoring ? "Scoring..." : "📊 Score My Answer"}
-          </button>
-
-          {scoreResult && (
-            <div className="w-full rounded border border-zinc-700 p-4 text-sm">
-              <div className="flex justify-between mb-2">
-                <span className="text-zinc-400">Communication</span>
-                <span className="font-bold text-blue-400">{scoreResult.communication_score}/10</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-zinc-400">Technical</span>
-                <span className="font-bold text-blue-400">{scoreResult.technical_score}/10</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-zinc-400">Confidence</span>
-                <span className="font-bold text-blue-400">{scoreResult.confidence_score}/10</span>
-              </div>
-              <p className="text-zinc-500 mt-3 mb-1">Feedback:</p>
-              <p className="text-zinc-300">{scoreResult.feedback}</p>
+              {uploading && <p className="text-xs text-neutral-500">Extracting resume text...</p>}
+              {resumeFileName && !uploading && (
+                <p className="text-xs text-emerald-400">{resumeFileName} loaded</p>
+              )}
 
               <button
-                onClick={goToNextQuestion}
-                className="mt-4 rounded bg-blue-600 px-4 py-2 font-medium hover:bg-blue-700 w-full"
+                onClick={handleGenerate}
+                disabled={loading || !company || !role}
+                className="mt-2 rounded-lg bg-white text-neutral-950 px-4 py-2.5 text-sm font-medium hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-white transition"
               >
-                {isLastQuestion ? "Finish Interview →" : "Next Question →"}
+                {loading ? "Generating questions..." : "Generate questions"}
               </button>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {isInterviewDone && (
-        <div className="flex flex-col items-center gap-4 w-96">
-          <h2 className="text-2xl font-bold">Interview Complete! 🎉</h2>
-          <p className="text-zinc-400 text-sm">Here's how you did across all questions:</p>
-
-          {allScores.map((score, i) => (
-            <div key={i} className="w-full rounded border border-zinc-700 p-4 text-sm">
-              <p className="text-zinc-500 mb-2">Question {i + 1}</p>
-              <div className="flex justify-between mb-1">
-                <span className="text-zinc-400">Communication</span>
-                <span className="font-bold text-blue-400">{score.communication_score}/10</span>
+        {hasQuestions && !isInterviewDone && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                Question {currentIndex + 1} of {questionsList.length}
+              </span>
+              <div className="flex gap-1">
+                {questionsList.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 w-6 rounded-full ${
+                      i < currentIndex ? "bg-emerald-500" : i === currentIndex ? "bg-white" : "bg-neutral-800"
+                    }`}
+                  />
+                ))}
               </div>
-              <div className="flex justify-between mb-1">
-                <span className="text-zinc-400">Technical</span>
-                <span className="font-bold text-blue-400">{score.technical_score}/10</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-zinc-400">Confidence</span>
-                <span className="font-bold text-blue-400">{score.confidence_score}/10</span>
-              </div>
-              <p className="text-zinc-300 text-xs">{score.feedback}</p>
             </div>
-          ))}
 
-          <button
-            onClick={resetInterview}
-            className="rounded bg-blue-600 px-4 py-2 font-medium hover:bg-blue-700 w-full"
-          >
-            Start New Interview
-          </button>
-        </div>
-      )}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+              <p className="text-[15px] leading-relaxed text-neutral-100">
+                {questionsList[currentIndex]}
+              </p>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => speakText(questionsList[currentIndex])}
+                  className="text-xs px-3 py-1.5 rounded-md bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition"
+                >
+                  Read aloud
+                </button>
+                <button
+                  onClick={stopSpeaking}
+                  className="text-xs px-3 py-1.5 rounded-md bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition"
+                >
+                  Stop
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={recording ? stopRecording : startRecording}
+              className={`rounded-xl px-6 py-3.5 text-sm font-medium transition ${
+                recording
+                  ? "bg-red-500/10 text-red-400 border border-red-900"
+                  : "bg-violet-500/10 text-violet-300 border border-violet-900 hover:bg-violet-500/20"
+              }`}
+            >
+              {recording ? "Stop recording" : "Record your answer"}
+            </button>
+
+            {transcribing && (
+              <p className="text-xs text-neutral-500 text-center">Transcribing your answer...</p>
+            )}
+            {transcribeError && (
+              <p className="text-xs text-amber-400 bg-amber-950/40 border border-amber-900 rounded-lg px-3 py-2 text-center">
+                Voice transcription didn't work this time — no worries, just type your answer below.
+              </p>
+            )}
+
+            {transcribedText && (
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3">
+                <p className="text-xs text-neutral-500 mb-1">Transcribed answer</p>
+                <p className="text-sm text-neutral-300">{transcribedText}</p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-neutral-500">
+                {transcribedText ? "Or edit / type your answer instead" : "Or type your answer"}
+              </span>
+              <textarea
+                value={manualAnswer}
+                onChange={(e) => setManualAnswer(e.target.value)}
+                placeholder="Type your answer here..."
+                rows={4}
+                className="px-3 py-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 resize-none"
+              />
+            </div>
+
+            <button
+              onClick={handleScoreAnswer}
+              disabled={scoring || !getCurrentAnswer()}
+              className="rounded-xl bg-white text-neutral-950 px-4 py-3 text-sm font-medium hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-white transition"
+            >
+              {scoring ? "Scoring..." : "Score my answer"}
+            </button>
+
+            {scoreError && (
+              <div className="bg-amber-950/40 border border-amber-900 rounded-lg p-3 text-center">
+                <p className="text-xs text-amber-400 mb-2">
+                  The AI is temporarily busy — this happens occasionally. Please try again.
+                </p>
+                <button
+                  onClick={handleScoreAnswer}
+                  className="text-xs px-3 py-1.5 rounded-md bg-amber-900/60 text-amber-200 hover:bg-amber-900 transition"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {scoreResult && (
+              <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-semibold">{scoreResult.communication_score}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Communication</p>
+                  </div>
+                  <div className="text-center border-x border-neutral-800">
+                    <p className="text-2xl font-semibold">{scoreResult.technical_score}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Technical</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-semibold">{scoreResult.confidence_score}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Confidence</p>
+                  </div>
+                </div>
+                <div className="border-t border-neutral-800 pt-3">
+                  <p className="text-xs text-neutral-500 mb-1">Feedback</p>
+                  <p className="text-sm text-neutral-300 leading-relaxed">{scoreResult.feedback}</p>
+                </div>
+
+                <button
+                  onClick={goToNextQuestion}
+                  className="mt-4 w-full rounded-lg bg-white text-neutral-950 px-4 py-2.5 text-sm font-medium hover:bg-neutral-200 transition"
+                >
+                  {isLastQuestion ? "Finish interview" : "Next question"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isInterviewDone && (
+          <div className="flex flex-col gap-4">
+            <div className="text-center py-4">
+              <h2 className="text-xl font-semibold">Interview complete</h2>
+              <p className="text-neutral-500 text-sm mt-1">Here's how you did across all questions</p>
+            </div>
+
+            {allScores.map((score, i) => (
+              <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                <p className="text-xs text-neutral-500 mb-2">Question {i + 1}</p>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">{score.communication_score}</p>
+                    <p className="text-[10px] text-neutral-500">Communication</p>
+                  </div>
+                  <div className="text-center border-x border-neutral-800">
+                    <p className="text-lg font-semibold">{score.technical_score}</p>
+                    <p className="text-[10px] text-neutral-500">Technical</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">{score.confidence_score}</p>
+                    <p className="text-[10px] text-neutral-500">Confidence</p>
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-400 leading-relaxed">{score.feedback}</p>
+              </div>
+            ))}
+
+            <button
+              onClick={resetInterview}
+              className="rounded-xl bg-white text-neutral-950 px-4 py-3 text-sm font-medium hover:bg-neutral-200 transition"
+            >
+              Start new interview
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
