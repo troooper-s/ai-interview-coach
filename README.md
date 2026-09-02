@@ -63,6 +63,21 @@ npm run dev
 
 This project was built and documented step-by-step, including real debugging challenges (CORS errors, memory management, authentication, deployment). See [PROGRESS.md](./PROGRESS.md) for the full build log.
 
+## 🔒 Security
+
+- Passwords are hashed with bcrypt before storage — plaintext passwords are never saved
+- JWT tokens with expiration are used for session authentication
+- All core endpoints require a valid authenticated token
+
+**Planned improvements:**
+- Rate limiting on login/signup endpoints to prevent brute-force attempts
+- File-type and file-size validation on resume uploads (currently accepts any PDF up to server limits)
+- Refresh token rotation for longer-lived sessions
+
+## 🧪 Testing
+
+Basic backend tests are planned using `pytest` to cover authentication flows and API response validation. This is an area for future improvement — currently the application has been validated through extensive manual end-to-end testing across local and deployed environments (see [PROGRESS.md](./PROGRESS.md) for the full debugging history).
+
 ## 👤 Author
 
 Shreela Prasad, BIT Mesra
